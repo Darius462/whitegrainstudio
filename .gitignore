@@ -1,0 +1,11 @@
+dist/
+.env
+.env.*
+!.env.example
+.vercel/
+node_modules/
+
+.aws/
+.codex/
+.agents/
+release/
