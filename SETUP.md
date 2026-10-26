@@ -51,6 +51,6 @@ Paneli online hapet te `https://ADRESA-JOTE.vercel.app/admin`.
 - Dërgo një kërkesë test dhe shikoje te skeda Kërkesat në panel.
 - Dil nga paneli dhe sigurohu që kërkesat nuk janë të aksesueshme pa hyrje.
 
-Formulari ruan kërkesat në panel; njoftimet automatike me email nuk janë konfiguruar.
+Formulari ruan kërkesat në panel. Për aktivizimin e njoftimeve me email ndiq `EMAIL_SETUP.md`.
 Ka honeypot dhe kufizim një kërkesë për email në minutë. Për spam të vazhdueshëm duhet CAPTCHA e verifikuar në server.
 Fotot që hiqen nga një projekt mbeten në Storage për të mos fshirë aksidentalisht materiale të ripërdorura.
