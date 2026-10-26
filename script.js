@@ -203,3 +203,104 @@ const backendClient = import('./backend.js').then(({ getClient }) => getClient()
     document.getElementById('filter-status').textContent = 'Projektet online nuk u ngarkuan. Po shfaqet koleksioni lokal.';
   }
 })();
+
+// Keep form dropdowns aligned with their fields on desktop and mobile.
+document.querySelectorAll('.request-form select').forEach((select) => {
+  const label = select.closest('label');
+  const caption = document.createElement('span');
+  caption.id = `${select.id}-label`;
+  caption.textContent = label.firstChild.textContent.trim();
+  label.firstChild.replaceWith(caption);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'form-select';
+  select.before(wrapper);
+  wrapper.append(select);
+  select.classList.add('form-select-native');
+  select.tabIndex = -1;
+  select.setAttribute('aria-hidden', 'true');
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'form-select-trigger';
+  trigger.id = `${select.id}-trigger`;
+  label.htmlFor = trigger.id;
+  trigger.setAttribute('role', 'combobox');
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+  trigger.setAttribute('aria-labelledby', caption.id);
+  trigger.setAttribute('aria-required', String(select.required));
+  const list = document.createElement('div');
+  list.id = `${select.id}-options`;
+  list.className = 'form-select-options';
+  list.setAttribute('role', 'listbox');
+  list.setAttribute('aria-labelledby', caption.id);
+  list.hidden = true;
+  trigger.setAttribute('aria-controls', list.id);
+  const options = Array.from(select.options).filter(option => !option.disabled);
+  const items = options.map((option, index) => {
+    const item = document.createElement('div');
+    item.id = `${select.id}-option-${index}`;
+    item.className = 'form-select-option';
+    item.setAttribute('role', 'option');
+    item.textContent = option.textContent;
+    item.addEventListener('click', (event) => { event.preventDefault(); choose(index); });
+    list.append(item);
+    return item;
+  });
+  let active = 0;
+  function sync() {
+    trigger.textContent = select.selectedOptions[0]?.textContent || 'Zgjidh';
+    items.forEach((item, index) => item.setAttribute('aria-selected', String(select.value === options[index].value)));
+  }
+  function highlight(index) {
+    active = (index + items.length) % items.length;
+    items.forEach((item, i) => item.classList.toggle('is-highlighted', i === active));
+    trigger.setAttribute('aria-activedescendant', items[active].id);
+    items[active].scrollIntoView({ block: 'nearest' });
+  }
+  function close() {
+    list.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.removeAttribute('aria-activedescendant');
+    wrapper.classList.remove('is-open');
+  }
+  function open() {
+    document.dispatchEvent(new CustomEvent('close-form-selects'));
+    list.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+    wrapper.classList.add('is-open');
+    highlight(Math.max(0, options.findIndex(option => option.value === select.value)));
+  }
+  function choose(index) {
+    select.value = options[index].value;
+    trigger.removeAttribute('aria-invalid');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    sync(); close(); trigger.focus({ preventScroll: true });
+  }
+  trigger.addEventListener('click', () => list.hidden ? open() : close());
+  let typed = '', typedAt = 0;
+  trigger.addEventListener('keydown', (event) => {
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      if (list.hidden) { open(); return; }
+      highlight(event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : active + (event.key === 'ArrowDown' ? 1 : -1));
+    } else if ((event.key === 'Enter' || event.key === ' ') && !list.hidden) {
+      event.preventDefault(); choose(active);
+    } else if (event.key === 'Escape') { event.preventDefault(); close(); }
+    else if (event.key === 'Tab') close();
+    else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      typed = Date.now() - typedAt > 700 ? event.key : typed + event.key;
+      typedAt = Date.now();
+      const index = options.findIndex(option => normalize(option.textContent).startsWith(normalize(typed)));
+      if (index >= 0) { event.preventDefault(); if (list.hidden) open(); highlight(index); }
+    }
+  });
+  select.addEventListener('change', sync);
+  select.addEventListener('invalid', (event) => {
+    event.preventDefault(); trigger.setAttribute('aria-invalid', 'true'); trigger.focus(); open();
+  });
+  select.form.addEventListener('reset', () => setTimeout(() => { sync(); close(); trigger.removeAttribute('aria-invalid'); }, 0));
+  document.addEventListener('close-form-selects', close);
+  document.addEventListener('pointerdown', (event) => { if (!wrapper.contains(event.target)) close(); });
+  wrapper.append(trigger, list);
+  sync();
+});
